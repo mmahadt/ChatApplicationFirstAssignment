@@ -5,6 +5,9 @@ using System.Text;
 using System.Net;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.IO;
+using ClientLib;
 
 namespace ExampleChat
 {
@@ -129,7 +132,14 @@ namespace ExampleChat
         {
             this.clientSocket = inClientSocket;
             this.clNo = clineNo;
-            SendOverNetworkStream(Convert.ToString(clineNo), clientSocket.GetStream());
+            Message m1 = new Message()
+            {
+                Broadcast = false,
+                SenderClientID = null,
+                ReceiverClientID = Convert.ToString(clineNo),
+                MessageBody = Convert.ToString(clineNo)
+            };
+            SendOverNetworkStream(m1, clientSocket.GetStream());
             Thread ctThread = new Thread(doChat);
             ctThread.Start();
         }
@@ -182,6 +192,41 @@ namespace ExampleChat
             }
         }
 
+        // Convert an object to a byte array
+        public static byte[] ObjectToByteArray(Object obj)
+        {
+            BinaryFormatter bf = new BinaryFormatter();
+            using (var ms = new MemoryStream())
+            {
+                bf.Serialize(ms, obj);
+                return ms.ToArray();
+            }
+        }
+
+        // Convert an object to a byte array
+        public static byte[] ObjectToByteArray(Message obj)
+        {
+            BinaryFormatter bf = new BinaryFormatter();
+            using (var ms = new MemoryStream())
+            {
+                bf.Serialize(ms, obj);
+                return ms.ToArray();
+            }
+        }
+
+        // Convert a byte array to an Object
+        public static Object ByteArrayToObject(byte[] arrBytes)
+        {
+            using (var memStream = new MemoryStream())
+            {
+                var binForm = new BinaryFormatter();
+                memStream.Write(arrBytes, 0, arrBytes.Length);
+                memStream.Seek(0, SeekOrigin.Begin);
+                var obj = binForm.Deserialize(memStream);
+                return obj;
+            }
+        }
+
         public static void SendOverNetworkStream(string dataFromClient, NetworkStream networkStream)
         {
             //Get the length of message in terms of number of bytes
@@ -194,6 +239,23 @@ namespace ExampleChat
 
             //Write the message to the server stream
             byte[] outStream = Encoding.ASCII.GetBytes(dataFromClient);
+            networkStream.Write(outStream, 0, outStream.Length);
+            networkStream.Flush();
+        }
+
+        public static void SendOverNetworkStream(Message dataFromClient, NetworkStream networkStream)
+        {
+            byte[] message = ObjectToByteArray(dataFromClient);
+            //Get the length of message in terms of number of bytes
+            int messageLength = message.Length;
+
+            //lengthBytes are first 4 bytes in stream that contain
+            //message length as integer
+            byte[] lengthBytes = BitConverter.GetBytes(messageLength);
+            networkStream.Write(lengthBytes, 0, lengthBytes.Length);
+
+            //Write the message to the server stream
+            byte[] outStream = message;
             networkStream.Write(outStream, 0, outStream.Length);
             networkStream.Flush();
         }

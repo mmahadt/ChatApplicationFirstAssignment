@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading;
 
@@ -34,8 +36,10 @@ namespace ClientLib
                 clientSocket.Connect(Dns.GetHostEntry(Dns.GetHostName()).AddressList[0], 8888);
 
                 serverStream = clientSocket.GetStream();
+                Message m1 = ReceiveFromServerStream();
+                //Id = ReceiveFromServerStream();
+                Id = m1.MessageBody;
 
-                Id = ReceiveFromServerStream();
             }
             catch (InvalidOperationException)
             {
@@ -79,6 +83,30 @@ namespace ClientLib
             }
         }
 
+        // Convert an object to a byte array
+        public static byte[] ObjectToByteArray(Object obj)
+        {
+            BinaryFormatter bf = new BinaryFormatter();
+            using (var ms = new MemoryStream())
+            {
+                bf.Serialize(ms, obj);
+                return ms.ToArray();
+            }
+        }
+
+        // Convert a byte array to an Object
+        public static Object ByteArrayToObject(byte[] arrBytes)
+        {
+            using (var memStream = new MemoryStream())
+            {
+                var binForm = new BinaryFormatter();
+                memStream.Write(arrBytes, 0, arrBytes.Length);
+                memStream.Seek(0, SeekOrigin.Begin);
+                var obj = binForm.Deserialize(memStream);
+                return obj;
+                //return (Message)binForm.Deserialize(memStream);
+            }
+        }
 
         //public bool Broadcast(Message message)
         //{
@@ -104,11 +132,11 @@ namespace ClientLib
         //    {
         //        return false;//failure
         //    }
-            
+
         //}
 
         //https://stackoverflow.com/questions/7099875/sending-messages-and-files-over-networkstream
-        private string ReceiveFromServerStream()
+        private Message ReceiveFromServerStream()
         {
             //Read the length of incoming message from the server stream
             byte[] msgLengthBytes1 = new byte[sizeof(int)];
@@ -121,10 +149,10 @@ namespace ClientLib
             //read that number of bytes from the server stream
             serverStream.Read(inStream, 0, msgLength1);
             //convert the byte array to message string
-            string dataFromServer = Encoding.ASCII.GetString(inStream);
+            //string dataFromServer = Encoding.ASCII.GetString(inStream);
 
             //Console.WriteLine(dataFromServer);
-
+            Message dataFromServer = (Message)ByteArrayToObject(inStream);
             return dataFromServer;
         }
 
@@ -145,6 +173,8 @@ namespace ClientLib
             //ReceiveFromServerStream(serverStream);
             serverStream.Flush();
         }
+
+        //byte[] message = ObjectToByteArray(dataFromClient);
 
         //private void SendToServerStream(Message message)
         //{

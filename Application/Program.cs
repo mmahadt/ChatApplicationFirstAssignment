@@ -34,6 +34,13 @@ namespace ClientLib
             }
         }
 
+        static void MessagePrinter(Message message)
+        {
+            Console.WriteLine("Sender ID:\t{0}", message.SenderClientID);
+            Console.WriteLine("Receiver ID:\t{0}", message.ReceiverClientID);
+            Console.WriteLine("Message:\t{0}", message.MessageBody);
+            Console.WriteLine("Broadcast:\t{0}", message.Broadcast);
+        }
 
         static void Main(string[] args)
         {
