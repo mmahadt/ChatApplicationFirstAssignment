@@ -1,23 +1,31 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace ClientLib
 {
     public class Client
     {
+        //id is set for the first time and then becomes read only
+        //private string _id = "";  // Backing store (Real id)
         public string Id;
-        public Queue<Message> Inbox = new Queue<Message>();
-        private NetworkStream serverStream;
-        private TcpClient clientSocket;
-        
-        public Client()
+        //{
+        //    get => _id;
+        //    set
+        //    {
+        //        if (value == "")
+        //        {
+        //            _id = value;
+        //        }
+        //    }
+        //}
+
+        TcpClient clientSocket;
+        NetworkStream serverStream;
+
+        public void Start()
         {
             try
             {
@@ -25,11 +33,9 @@ namespace ClientLib
 
                 clientSocket.Connect(Dns.GetHostEntry(Dns.GetHostName()).AddressList[0], 8888);
 
-                Message dataFromServer = ReceiveFromServerStream();
-                Inbox.Enqueue(dataFromServer);
+                serverStream = clientSocket.GetStream();
 
-                Thread receiverThread = new Thread(MessageReceiverThreadFunction);
-                receiverThread.Start();
+                Id = ReceiveFromServerStream();
             }
             catch (InvalidOperationException)
             {
@@ -42,69 +48,120 @@ namespace ClientLib
             catch (Exception ex)
             {
                 Console.WriteLine(" >> " + ex.ToString());
+                
             }
-            //First message sent to each client is from server containing
-            //id assigned by the server
             
-            Id = Inbox.Dequeue().MessageBody;
-            
-            
-        }
+        }     
 
-        public Message Broadcast(string message)
-        {
-            Message m = new Message
+        public Message StringsToMessageObject(string receiver,string message,bool broadcast)
+        {         
+            if (!broadcast)
             {
-                Broadcast = true,
-                SenderClientID = Id,
-                MessageBody = message,
-                ReceiverClientID = null
-            };
-            SendToServerStream(m);
-            return m;
-        }
-
-        public Message Unicast(string message, string receiverId)
-        {
-            Message m = new Message
-            {
-                Broadcast = false,
-                SenderClientID = Id,
-                MessageBody = message,
-                ReceiverClientID = receiverId
-            };
-            SendToServerStream(m);
-            return m;
-        }
-
-        private void MessageReceiverThreadFunction()
-        {
-            while (true)
-            {
-                if (serverStream.DataAvailable)
+                Message m1 = new Message()
                 {
-                    Message dataFromServer = ReceiveFromServerStream();
-                    Inbox.Enqueue(dataFromServer);
-                }         
+                    Broadcast = false,
+                    SenderClientID = Id,
+                    ReceiverClientID = receiver,
+                    MessageBody = message
+                };
+                return m1;
+            }
+            else
+            {
+                Message m1 = new Message()
+                {
+                    Broadcast = true,
+                    SenderClientID = Id,
+                    ReceiverClientID = receiver,
+                    MessageBody = message
+                };
+                return m1;
             }
         }
 
-        public void SendToServerStream(Message message)
+
+        //public bool Broadcast(Message message)
+        //{
+        //    try
+        //    {
+        //        SendToServerStream(message);
+        //        return true;//success
+        //    }
+        //    catch(Exception ex)
+        //    {
+        //        return false;//failure
+        //    }
+        //}
+
+        //public bool Unicast(Message message)
+        //{
+        //    try
+        //    {
+        //        SendToServerStream(message);
+        //        return true;//success
+        //    }
+        //    catch
+        //    {
+        //        return false;//failure
+        //    }
+            
+        //}
+
+        //https://stackoverflow.com/questions/7099875/sending-messages-and-files-over-networkstream
+        private string ReceiveFromServerStream()
         {
-            var bin = new BinaryFormatter();
-            bin.Serialize(serverStream, message);
+            //Read the length of incoming message from the server stream
+            byte[] msgLengthBytes1 = new byte[sizeof(int)];
+            serverStream.Read(msgLengthBytes1, 0, msgLengthBytes1.Length);
+            //store the length of message as an integer
+            int msgLength1 = BitConverter.ToInt32(msgLengthBytes1, 0);
+
+            //create a buffer for incoming data of size equal to length of message
+            byte[] inStream = new byte[msgLength1];
+            //read that number of bytes from the server stream
+            serverStream.Read(inStream, 0, msgLength1);
+            //convert the byte array to message string
+            string dataFromServer = Encoding.ASCII.GetString(inStream);
+
+            //Console.WriteLine(dataFromServer);
+
+            return dataFromServer;
+        }
+
+        private void SendToServerStream(string message)
+        { 
+            //Get the length of message in terms of number of bytes
+            int messageLength = Encoding.ASCII.GetByteCount(message);
+
+            //lengthBytes are first 4 bytes in stream that contain
+            //message length as integer
+            byte[] lengthBytes = BitConverter.GetBytes(messageLength);
+            serverStream.Write(lengthBytes, 0, lengthBytes.Length);
+
+            //Write the message to the server stream
+            byte[] outStream = Encoding.ASCII.GetBytes(message);
+            serverStream.Write(outStream, 0, outStream.Length);
+
+            //ReceiveFromServerStream(serverStream);
             serverStream.Flush();
         }
 
-        public Message ReceiveFromServerStream()
-        {
-            // Client side
-            
-            var bin = new BinaryFormatter();
-            Message m1 = (Message)bin.Deserialize(serverStream);
-            
-            serverStream.Flush();
-            return m1;
-        }
+        //private void SendToServerStream(Message message)
+        //{
+        //    //Get the length of message in terms of number of bytes
+        //    int messageLength = Encoding.ASCII.GetByteCount(message);
+
+        //    //lengthBytes are first 4 bytes in stream that contain
+        //    //message length as integer
+        //    byte[] lengthBytes = BitConverter.GetBytes(messageLength);
+        //    serverStream.Write(lengthBytes, 0, lengthBytes.Length);
+
+        //    //Write the message to the server stream
+        //    byte[] outStream = Encoding.ASCII.GetBytes(message);
+        //    serverStream.Write(outStream, 0, outStream.Length);
+
+        //    //ReceiveFromServerStream(serverStream);
+        //    serverStream.Flush();
+        //}
     }
 }

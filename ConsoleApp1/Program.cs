@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using ClientLib;
 
-namespace ConsoleApp1
+namespace ClientLib
 {
     public class Client
     {

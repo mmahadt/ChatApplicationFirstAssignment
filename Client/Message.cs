@@ -11,24 +11,24 @@ namespace ClientLib
     {
         public string SenderClientID
         {
-            get { return SenderClientID; }
-            set { SenderClientID = value; }
+            get;
+            set; 
         }
         public string ReceiverClientID
         {
-            get { return ReceiverClientID; }
-            set { ReceiverClientID = value; }
+            get;
+            set;
         }
         public string MessageBody
         {
-            get { return MessageBody; }
-            set { MessageBody = value; }
+            get;
+            set;
         }
 
         public bool Broadcast
         {
-            get { return Broadcast; }
-            set { Broadcast = value; }
+            get;
+            set;
         }
     }
 }

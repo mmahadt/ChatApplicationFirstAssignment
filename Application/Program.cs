@@ -1,71 +1,64 @@
 ﻿using System;
-using System.Collections.Generic;
-using ClientLib;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
 
-namespace Application
+namespace ClientLib
 {
-    class Program
+    public class ClientApplication
     {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Welcome to chat application");
-            Client c1 = new Client();
-            Console.WriteLine(c1.Id);
-            
-            //InboxPrinter(c1.Inbox);
-            Console.Read();
-        }
-
-        static void MessagePrinter(Message message)
-        {
-            Console.WriteLine("Sender ID:\t{0}", message.SenderClientID);
-            Console.WriteLine("Receiver ID:\t{0}", message.ReceiverClientID);
-            Console.WriteLine("Message:\t{0}", message.MessageBody);
-            Console.WriteLine("Broadcast:\t{0}", message.Broadcast);
-        }
-
-        static void InboxPrinter(Queue<Message> Inbox)
-        {
-            foreach (Message message in Inbox)
-            {
-                MessagePrinter(message);
-            }
-        }
-
-        static Message GetInputFromUser()
+        Client C1 = new Client();
+        public Message GetInputFromUser()
         {
             Console.WriteLine("Input Sender ID");
             string sender = Console.ReadLine();
-            
-            Console.WriteLine("Input Receiver ID");
-            string receiver = Console.ReadLine();
-            
+
+
             Console.WriteLine("Type Messsage");
             string message = Console.ReadLine();
-            
-            Console.WriteLine("Is it Broadcast? Type yes or no)");
+
+            Console.WriteLine("Is it Broadcast? Type (yes or no)");
             string inputString = Console.ReadLine();
             bool broadcast = inputString.ToLower() == "yes" || inputString.ToLower() == "y";
 
-            Message m1 = new Message
+            if (broadcast)
             {
-                Broadcast = broadcast,
-                SenderClientID = sender,
-                ReceiverClientID = receiver,
-                MessageBody = message
-            };
-
-            return m1;
+                Console.WriteLine("Input Receiver ID");
+                string receiver = Console.ReadLine();
+                return C1.StringsToMessageObject(receiver, message, true);
+            }
+            else
+            {
+                return C1.StringsToMessageObject(null, message, false);
+            }
         }
 
-        
 
-        //public void PrintInbox(Client c)
-        //{
-        //    foreach (message in c.Inbox)
-        //    {
-        //        MessagePrinter(message);
-        //    }
-        //}
+        static void Main(string[] args)
+        {
+            ClientApplication CA = new ClientApplication();
+
+            CA.C1.Start();
+
+            Console.WriteLine("Client Socket Program - Server Connected...");
+            Console.WriteLine("My Id is " + CA.C1.Id);
+
+            Message m1 = CA.GetInputFromUser();
+            //if (m1.Broadcast)
+            //{
+            //    CA.C1.Broadcast(m1);
+            //}
+            //else
+            //{
+            //    CA.C1.Unicast(m1);
+            //}
+            Console.ReadLine();
+        }
+
+
+
+
     }
+        
 }
