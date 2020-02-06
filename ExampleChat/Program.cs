@@ -16,23 +16,24 @@ namespace ExampleChat
         //A list of strings to contain client Ids
         private static List<handleClinet> listOfClients = new List<handleClinet>();
 
-        public static Queue<string> Outbox = new Queue<string>();
+        //public static Queue<string> Outbox = new Queue<string>();
 
-        private static string GetSenderId(string msg)
-        {
-            string[] words = msg.Split('_');
-            return words[1];
-        }
-        private static string GetReceiverId(string msg)
-        {
-            string[] words = msg.Split('_');
-            return words[2];
-        }
-        private static bool IsBroadcast(string msg)
-        {
-            string[] words = msg.Split('_');
-            return (words[3] == "1");
-        }
+        public static Queue<Message> Outbox = new Queue<Message>();
+        //private static string GetSenderId(string msg)
+        //{
+        //    string[] words = msg.Split('_');
+        //    return words[1];
+        //}
+        //private static string GetReceiverId(string msg)
+        //{
+        //    string[] words = msg.Split('_');
+        //    return words[2];
+        //}
+        //private static bool IsBroadcast(string msg)
+        //{
+        //    string[] words = msg.Split('_');
+        //    return (words[3] == "1");
+        //}
 
         private static void MessageSender()
         {
@@ -40,24 +41,24 @@ namespace ExampleChat
             {
                 if (Outbox.Count != 0)
                 {
-                    string message = Outbox.Peek();
-                    if (IsBroadcast(message))
+                    Message message = Outbox.Peek();
+                    if (message.Broadcast)
                     {
                         Console.WriteLine(">> Broadcast message from client\t" + message);
-                        Broadcast(message, GetSenderId(message));
+                        Broadcast(message, message.SenderClientID);
                         Outbox.Dequeue();
                     }
                     else
                     {
                         Console.WriteLine(">> Unicast message from client\t" + message);
-                        Unicast(message, GetReceiverId(message));
+                        Unicast(message, message.ReceiverClientID);
                         Outbox.Dequeue();
                     }
                 }
             }
         }
 
-        public static void Unicast(string msg, string receiverId)
+        public static void Unicast(Message msg, string receiverId)
         {
             foreach (handleClinet client in listOfClients)
             {
@@ -70,7 +71,7 @@ namespace ExampleChat
             }
         }
 
-        public static void Broadcast(string msg, string senderId)
+        public static void Broadcast(Message msg, string senderId)
         {
             foreach (handleClinet client in listOfClients)
             {
@@ -148,7 +149,7 @@ namespace ExampleChat
         {
             int requestCount = 0;
             //byte[] bytesFrom = new byte[10025];
-            string dataFromClient = null;
+            Message dataFromClient = null;
             //Byte[] sendBytes = null;
             //string serverResponse = null;
             //string rCount = null;
@@ -227,21 +228,21 @@ namespace ExampleChat
             }
         }
 
-        public static void SendOverNetworkStream(string dataFromClient, NetworkStream networkStream)
-        {
-            //Get the length of message in terms of number of bytes
-            int messageLength = Encoding.ASCII.GetByteCount(dataFromClient);
+        //public static void SendOverNetworkStream(string dataFromClient, NetworkStream networkStream)
+        //{
+        //    //Get the length of message in terms of number of bytes
+        //    int messageLength = Encoding.ASCII.GetByteCount(dataFromClient);
 
-            //lengthBytes are first 4 bytes in stream that contain
-            //message length as integer
-            byte[] lengthBytes = BitConverter.GetBytes(messageLength);
-            networkStream.Write(lengthBytes, 0, lengthBytes.Length);
+        //    //lengthBytes are first 4 bytes in stream that contain
+        //    //message length as integer
+        //    byte[] lengthBytes = BitConverter.GetBytes(messageLength);
+        //    networkStream.Write(lengthBytes, 0, lengthBytes.Length);
 
-            //Write the message to the server stream
-            byte[] outStream = Encoding.ASCII.GetBytes(dataFromClient);
-            networkStream.Write(outStream, 0, outStream.Length);
-            networkStream.Flush();
-        }
+        //    //Write the message to the server stream
+        //    byte[] outStream = Encoding.ASCII.GetBytes(dataFromClient);
+        //    networkStream.Write(outStream, 0, outStream.Length);
+        //    networkStream.Flush();
+        //}
 
         public static void SendOverNetworkStream(Message dataFromClient, NetworkStream networkStream)
         {
@@ -260,19 +261,40 @@ namespace ExampleChat
             networkStream.Flush();
         }
 
-        private string ReadFromNetworkStream(NetworkStream networkStream)
+
+        public static Message ReadFromNetworkStream(NetworkStream networkStream)
         {
-            string dataFromClient;
-            byte[] msgLengthBytes = new byte[sizeof(int)];
-            networkStream.Read(msgLengthBytes, 0, msgLengthBytes.Length);
-            int msgLength = BitConverter.ToInt32(msgLengthBytes, 0);
+            //Read the length of incoming message from the server stream
+            byte[] msgLengthBytes1 = new byte[sizeof(int)];
+            networkStream.Read(msgLengthBytes1, 0, msgLengthBytes1.Length);
+            //store the length of message as an integer
+            int msgLength1 = BitConverter.ToInt32(msgLengthBytes1, 0);
 
-            byte[] inStream = new byte[msgLength];//buffer for incoming data
-            networkStream.Read(inStream, 0, msgLength);
-            dataFromClient = Encoding.ASCII.GetString(inStream);
-            Console.WriteLine(" >> " + "From client-" + clNo + "\t" + dataFromClient);
+            //create a buffer for incoming data of size equal to length of message
+            byte[] inStream = new byte[msgLength1];
+            //read that number of bytes from the server stream
+            networkStream.Read(inStream, 0, msgLength1);
+            //convert the byte array to message string
+            //string dataFromServer = Encoding.ASCII.GetString(inStream);
 
-            return dataFromClient;
+            //Console.WriteLine(dataFromServer);
+            Message dataFromServer = (Message)ByteArrayToObject(inStream);
+            return dataFromServer;
         }
+
+        //private string ReadFromNetworkStream(NetworkStream networkStream)
+        //{
+        //    string dataFromClient;
+        //    byte[] msgLengthBytes = new byte[sizeof(int)];
+        //    networkStream.Read(msgLengthBytes, 0, msgLengthBytes.Length);
+        //    int msgLength = BitConverter.ToInt32(msgLengthBytes, 0);
+
+        //    byte[] inStream = new byte[msgLength];//buffer for incoming data
+        //    networkStream.Read(inStream, 0, msgLength);
+        //    dataFromClient = Encoding.ASCII.GetString(inStream);
+        //    Console.WriteLine(" >> " + "From client-" + clNo + "\t" + dataFromClient);
+
+        //    return dataFromClient;
+        //}
     }
 }

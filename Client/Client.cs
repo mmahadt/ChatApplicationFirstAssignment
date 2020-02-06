@@ -174,6 +174,23 @@ namespace ClientLib
             serverStream.Flush();
         }
 
+        public void SendToServerStream(Message dataFromClient)
+        {
+            byte[] message = ObjectToByteArray(dataFromClient);
+            //Get the length of message in terms of number of bytes
+            int messageLength = message.Length;
+
+            //lengthBytes are first 4 bytes in stream that contain
+            //message length as integer
+            byte[] lengthBytes = BitConverter.GetBytes(messageLength);
+            serverStream.Write(lengthBytes, 0, lengthBytes.Length);
+
+            //Write the message to the server stream
+            byte[] outStream = message;
+            serverStream.Write(outStream, 0, outStream.Length);
+            serverStream.Flush();
+        }
+
         //byte[] message = ObjectToByteArray(dataFromClient);
 
         //private void SendToServerStream(Message message)
