@@ -9,7 +9,7 @@ namespace ClientLib
 {
     public class ClientApplication
     {
-        Client C1 = new Client();
+        Client client = new Client();
 
         public Message GetInputFromUser()
         {
@@ -24,11 +24,11 @@ namespace ClientLib
             {
                 Console.WriteLine("Input Receiver ID");
                 string receiver = Console.ReadLine();
-                return C1.StringsToMessageObject(receiver, message, false);
+                return client.StringsToMessageObject(receiver, message, false);
             }
             else
             {
-                return C1.StringsToMessageObject(null, message, true);
+                return client.StringsToMessageObject(null, message, true);
             }
         }
 
@@ -58,29 +58,29 @@ namespace ClientLib
 
         static void Main(string[] args)
         {
-            ClientApplication CA = new ClientApplication();
-            CA.C1.Start();
+            ClientApplication clientApplication = new ClientApplication();
+            clientApplication.client.Start();
 
             Console.WriteLine("Welcome to Chat application");
-            Console.WriteLine("I am a client application and my Id is " + CA.C1.Id);
+            Console.WriteLine("I am a client application and my Id is " + clientApplication.client.Id);
 
-            foreach(string cl in CA.C1.listOfOtherClients)
-            {
-                Console.WriteLine(cl);
-            }
-            Thread messagePrinterThread = new Thread(() => InboxPrinter(CA.C1.Inbox));
+            //foreach(string cl in clientApplication.client.listOfOtherClients)
+            //{
+            //    Console.WriteLine(cl);
+            //}
+            Thread messagePrinterThread = new Thread(() => InboxPrinter(clientApplication.client.Inbox));
             messagePrinterThread.Start();
 
             while (true)
             {
-                Message m1 = CA.GetInputFromUser();
+                Message m1 = clientApplication.GetInputFromUser();
                 if (m1.Broadcast)
                 {
-                    CA.C1.Broadcast(m1);
+                    clientApplication.client.Broadcast(m1);
                 }
                 else
                 {
-                    CA.C1.Unicast(m1);
+                    clientApplication.client.Unicast(m1);
                 }
             }
         }
