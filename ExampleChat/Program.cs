@@ -90,12 +90,13 @@ namespace ExampleChat
                     counter += 1;
                     clientSocket = serverSocket.AcceptTcpClient();
                     Console.WriteLine(" >> " + "Client No:" + Convert.ToString(counter) + " connected");
+                    
                     handleClinet client = new handleClinet();
-                    client.startClient(clientSocket, Convert.ToString(counter));
-
                     //Make a list of clients
                     listOfClients.Add(client);
-                    clientsList.Add(counter.ToString());
+                    clientsList.Add(Convert.ToString(counter));
+                    client.startClient(clientSocket, Convert.ToString(counter));
+
                 }               
                 catch (Exception ex)
                 {
@@ -129,12 +130,14 @@ namespace ExampleChat
             };
             SendOverNetworkStream(m1, clientSocket.GetStream());
 
+            string clientListString = string.Join("_",Program.clientsList);
+            
             Message m2 = new Message()
             {
                 Broadcast = false,
                 SenderClientID = null,
                 ReceiverClientID = Convert.ToString(clineNo),
-                MessageBody = Encoding.ASCII.GetString((ObjectToByteArray(Program.clientsList)))
+                MessageBody = clientListString
             };
             SendOverNetworkStream(m2, clientSocket.GetStream());
 

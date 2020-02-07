@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Configuration;
 
 namespace ClientLib
 {
@@ -13,6 +14,8 @@ namespace ClientLib
 
         public Message GetInputFromUser()
         {
+            string[] words = client.listOfOtherClients.Split('_');
+
             Console.WriteLine("\n\n\nType Messsage");
             string message = Console.ReadLine();
 
@@ -22,9 +25,16 @@ namespace ClientLib
 
             if (!broadcast)
             {
-                Console.WriteLine("Input Receiver ID");
-                string receiver = Console.ReadLine();
+                string receiver = "";
+
+                while (!Array.Exists(words, x => x == receiver))
+                {
+                    Console.WriteLine("Input Receiver ID");
+                    Console.WriteLine("Valid receiver vals are {0}", client.listOfOtherClients);
+                    receiver = Console.ReadLine();
+                }
                 return client.StringsToMessageObject(receiver, message, false);
+
             }
             else
             {
@@ -59,15 +69,15 @@ namespace ClientLib
         static void Main(string[] args)
         {
             ClientApplication clientApplication = new ClientApplication();
-            clientApplication.client.Start();
+
+            //Read the port number from app.config file
+            int port = int.Parse(ConfigurationManager.AppSettings["connectionManager:port"]);
+
+            clientApplication.client.Start(port);
 
             Console.WriteLine("Welcome to Chat application");
             Console.WriteLine("I am a client application and my Id is " + clientApplication.client.Id);
 
-            //foreach(string cl in clientApplication.client.listOfOtherClients)
-            //{
-            //    Console.WriteLine(cl);
-            //}
             Thread messagePrinterThread = new Thread(() => InboxPrinter(clientApplication.client.Inbox));
             messagePrinterThread.Start();
 

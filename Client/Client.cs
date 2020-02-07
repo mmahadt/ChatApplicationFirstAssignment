@@ -28,8 +28,9 @@ namespace ClientLib
         TcpClient clientSocket;
         NetworkStream serverStream;
         public Queue<Message> Inbox = new Queue<Message>();
-        public List<string> listOfOtherClients;
-        public void Start()
+        //public List<string> listOfOtherClients;
+        public string listOfOtherClients;
+        public void Start(int port)
         {
             
             try
@@ -39,13 +40,13 @@ namespace ClientLib
 
                 clientSocket = new TcpClient();
 
-                clientSocket.Connect(Dns.GetHostEntry(Dns.GetHostName()).AddressList[0], 8888);
+                clientSocket.Connect(Dns.GetHostEntry(Dns.GetHostName()).AddressList[0], port);
 
                 serverStream = clientSocket.GetStream();
                 Message m1 = ReceiveFromServerStream();
                 Message m2 = ReceiveFromServerStream();
-                listOfOtherClients = (List<string>)ByteArrayToObject(Encoding.ASCII.GetBytes((m2.MessageBody)));
-                
+                listOfOtherClients = m2.MessageBody;
+
                 Id = m1.MessageBody;
 
                 Thread receiverThread = new Thread(() => ReceiverThreadFunction(serverStream));
