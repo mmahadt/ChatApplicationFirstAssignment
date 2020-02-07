@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -26,19 +27,29 @@ namespace ClientLib
 
         TcpClient clientSocket;
         NetworkStream serverStream;
-
+        public Queue<Message> Inbox = new Queue<Message>();
+        public List<string> listOfOtherClients;
         public void Start()
         {
+            
             try
             {
+                //Read the port number from app.config file
+                //int port = int.Parse(ConfigurationManager.AppSettings["connectionManager:port"]);
+
                 clientSocket = new TcpClient();
 
                 clientSocket.Connect(Dns.GetHostEntry(Dns.GetHostName()).AddressList[0], 8888);
 
                 serverStream = clientSocket.GetStream();
                 Message m1 = ReceiveFromServerStream();
-                //Id = ReceiveFromServerStream();
+                Message m2 = ReceiveFromServerStream();
+                listOfOtherClients = (List<string>)ByteArrayToObject(Encoding.ASCII.GetBytes((m2.MessageBody)));
+                
                 Id = m1.MessageBody;
+
+                Thread receiverThread = new Thread(() => ReceiverThreadFunction(serverStream));
+                receiverThread.Start();
 
             }
             catch (InvalidOperationException)
@@ -52,11 +63,18 @@ namespace ClientLib
             catch (Exception ex)
             {
                 Console.WriteLine(" >> " + ex.ToString());
-                
             }
             
-        }     
+        }
+        private void ReceiverThreadFunction(NetworkStream stream)
+        {
+            while (true)
+            {
+                Message dataFromServer = ReceiveFromServerStream();
 
+                Inbox.Enqueue(dataFromServer);
+            }
+        }
         public Message StringsToMessageObject(string receiver,string message,bool broadcast)
         {         
             if (!broadcast)
@@ -104,36 +122,35 @@ namespace ClientLib
                 memStream.Seek(0, SeekOrigin.Begin);
                 var obj = binForm.Deserialize(memStream);
                 return obj;
-                //return (Message)binForm.Deserialize(memStream);
             }
         }
 
-        //public bool Broadcast(Message message)
-        //{
-        //    try
-        //    {
-        //        SendToServerStream(message);
-        //        return true;//success
-        //    }
-        //    catch(Exception ex)
-        //    {
-        //        return false;//failure
-        //    }
-        //}
+        public bool Broadcast(Message message)
+        {
+            try
+            {
+                SendToServerStream(message);
+                return true;//success
+            }
+            catch (Exception ex)
+            {
+                return false;//failure
+            }
+        }
 
-        //public bool Unicast(Message message)
-        //{
-        //    try
-        //    {
-        //        SendToServerStream(message);
-        //        return true;//success
-        //    }
-        //    catch
-        //    {
-        //        return false;//failure
-        //    }
+        public bool Unicast(Message message)
+        {
+            try
+            {
+                SendToServerStream(message);
+                return true;//success
+            }
+            catch
+            {
+                return false;//failure
+            }
 
-        //}
+        }
 
         //https://stackoverflow.com/questions/7099875/sending-messages-and-files-over-networkstream
         private Message ReceiveFromServerStream()
@@ -148,30 +165,9 @@ namespace ClientLib
             byte[] inStream = new byte[msgLength1];
             //read that number of bytes from the server stream
             serverStream.Read(inStream, 0, msgLength1);
-            //convert the byte array to message string
-            //string dataFromServer = Encoding.ASCII.GetString(inStream);
-
-            //Console.WriteLine(dataFromServer);
+            //convert the byte array to message object
             Message dataFromServer = (Message)ByteArrayToObject(inStream);
             return dataFromServer;
-        }
-
-        private void SendToServerStream(string message)
-        { 
-            //Get the length of message in terms of number of bytes
-            int messageLength = Encoding.ASCII.GetByteCount(message);
-
-            //lengthBytes are first 4 bytes in stream that contain
-            //message length as integer
-            byte[] lengthBytes = BitConverter.GetBytes(messageLength);
-            serverStream.Write(lengthBytes, 0, lengthBytes.Length);
-
-            //Write the message to the server stream
-            byte[] outStream = Encoding.ASCII.GetBytes(message);
-            serverStream.Write(outStream, 0, outStream.Length);
-
-            //ReceiveFromServerStream(serverStream);
-            serverStream.Flush();
         }
 
         public void SendToServerStream(Message dataFromClient)
@@ -191,24 +187,6 @@ namespace ClientLib
             serverStream.Flush();
         }
 
-        //byte[] message = ObjectToByteArray(dataFromClient);
-
-        //private void SendToServerStream(Message message)
-        //{
-        //    //Get the length of message in terms of number of bytes
-        //    int messageLength = Encoding.ASCII.GetByteCount(message);
-
-        //    //lengthBytes are first 4 bytes in stream that contain
-        //    //message length as integer
-        //    byte[] lengthBytes = BitConverter.GetBytes(messageLength);
-        //    serverStream.Write(lengthBytes, 0, lengthBytes.Length);
-
-        //    //Write the message to the server stream
-        //    byte[] outStream = Encoding.ASCII.GetBytes(message);
-        //    serverStream.Write(outStream, 0, outStream.Length);
-
-        //    //ReceiveFromServerStream(serverStream);
-        //    serverStream.Flush();
-        //}
+        
     }
 }
