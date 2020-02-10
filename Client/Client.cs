@@ -72,8 +72,14 @@ namespace ClientLib
             while (true)
             {
                 Message dataFromServer = ReceiveFromServerStream();
-
-                Inbox.Enqueue(dataFromServer);
+                if (dataFromServer.SenderClientID=="Server")
+                {
+                    listOfOtherClients = dataFromServer.MessageBody;
+                }
+                else
+                {
+                    Inbox.Enqueue(dataFromServer);
+                }
             }
         }
         public Message StringsToMessageObject(string receiver,string message,bool broadcast)

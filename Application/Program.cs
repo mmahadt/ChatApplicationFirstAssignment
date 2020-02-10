@@ -14,14 +14,14 @@ namespace ClientLib
 
         public Message GetInputFromUser()
         {
-            string[] words = client.listOfOtherClients.Split('_');
-
-            Console.WriteLine("\n\n\nType Messsage");
-            string message = Console.ReadLine();
-
-            Console.WriteLine("Is it Broadcast? Type (yes or no)");
+            Console.WriteLine("\n\n\nIs it Broadcast? Type (yes or no)");
             string inputString = Console.ReadLine();
             bool broadcast = inputString.ToLower() == "yes" || inputString.ToLower() == "y";
+
+            Console.WriteLine("Type Messsage");
+            string message = Console.ReadLine();
+
+            string[] words = client.listOfOtherClients.Split('_');        
 
             if (!broadcast)
             {
@@ -75,8 +75,7 @@ namespace ClientLib
 
             clientApplication.client.Start(port);
 
-            Console.WriteLine("Welcome to Chat application");
-            Console.WriteLine("I am a client application and my Id is " + clientApplication.client.Id);
+            Console.WriteLine("Client application Id" + clientApplication.client.Id);
 
             Thread messagePrinterThread = new Thread(() => InboxPrinter(clientApplication.client.Inbox));
             messagePrinterThread.Start();

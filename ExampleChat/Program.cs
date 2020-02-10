@@ -8,6 +8,8 @@ using System.Configuration;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using ClientLib;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 
 namespace ExampleChat
 {
@@ -17,7 +19,28 @@ namespace ExampleChat
         public static List<handleClinet> listOfClients = new List<handleClinet>();
         public static List<string> clientsList = new List<string>();
         public static Queue<Message> Outbox = new Queue<Message>();
-        
+    
+        public static ObservableCollection<string> ClList { get; set; }
+
+        public void Clear()
+        {
+            ClList.Clear();
+        }
+
+        private static void OnListChanged(object sender, NotifyCollectionChangedEventArgs args)
+        {
+            // react to list changed
+            string clientListString = string.Join("_", Program.ClList);
+
+            Message m2 = new Message()
+            {
+                Broadcast = false,
+                SenderClientID = "Server",
+                ReceiverClientID = null,
+                MessageBody = clientListString
+            };
+            Broadcast(m2, m2.SenderClientID);
+        }
         private static void MessageSender()
         {
             while (true)
@@ -45,7 +68,7 @@ namespace ExampleChat
         {
             foreach (handleClinet client in listOfClients)
             {
-                if (client.clNo == receiverId)
+                if (client.clNo == receiverId && ClList.Contains(client.clNo))
                 //send message to intended recipient only
                 {
                     handleClinet.SendOverNetworkStream(msg, client.clientSocket.GetStream());
@@ -57,7 +80,7 @@ namespace ExampleChat
         {
             foreach (handleClinet client in listOfClients)
             {
-                if (client.clNo != senderId) //send the message to all 
+                if (client.clNo != senderId && ClList.Contains(client.clNo)) //send the message to all 
                                              //clients except the sender
                 {
                     handleClinet.SendOverNetworkStream(msg, client.clientSocket.GetStream());
@@ -67,6 +90,9 @@ namespace ExampleChat
 
         static void Main(string[] args)
         {
+            ClList = new ObservableCollection<string>();
+            ClList.CollectionChanged += Program.OnListChanged;
+
             //Read the port number from app.config file
             int port = int.Parse(ConfigurationManager.AppSettings["connectionManager:port"]);
             
@@ -140,7 +166,7 @@ namespace ExampleChat
                 MessageBody = clientListString
             };
             SendOverNetworkStream(m2, clientSocket.GetStream());
-
+            Program.ClList.Add(clNo);
             Thread ctThread = new Thread(doChat);
             ctThread.Start();
         }
@@ -182,6 +208,7 @@ namespace ExampleChat
                 }
                 catch (System.IO.IOException)
                 {
+                    Program.ClList.Remove(clNo);
                     Console.WriteLine("Client {0} disconnected.", clNo);
                     return;
                 }
