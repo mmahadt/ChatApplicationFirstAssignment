@@ -71,14 +71,21 @@ namespace ClientLib
         {
             while (true)
             {
-                Message dataFromServer = ReceiveFromServerStream();
-                if (dataFromServer.SenderClientID=="Server")
+                try
                 {
-                    listOfOtherClients = dataFromServer.MessageBody;
+                    Message dataFromServer = ReceiveFromServerStream();
+                    if (dataFromServer.SenderClientID == "Server")
+                    {
+                        listOfOtherClients = dataFromServer.MessageBody;
+                    }
+                    else
+                    {
+                        Inbox.Enqueue(dataFromServer);
+                    }
                 }
-                else
+                catch(Exception)
                 {
-                    Inbox.Enqueue(dataFromServer);
+                    return;
                 }
             }
         }
